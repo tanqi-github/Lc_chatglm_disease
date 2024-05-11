@@ -281,6 +281,116 @@ class ApiRequest:
         '''
         对应api.py/chat/chat接口
         '''
+
+        # # print(query)
+        #
+        # from neo4j import GraphDatabase
+        # import torch
+        # from transformers import AutoTokenizer, AutoModel
+        # import jieba
+        # import jieba.posseg as pseg
+        # import jieba.analyse
+        # # Neo4j连接配置
+        # uri = "bolt://localhost:7687"
+        # user = "neo4j"
+        # password = "xueyan134679"
+        #
+        # # Neo4j连接
+        # class Neo4jConnector:
+        #     def __init__(self):
+        #         self._driver = GraphDatabase.driver(uri, auth=(user, password))
+        #
+        #     def close(self):
+        #         self._driver.close()
+        #
+        #     def run_query(self, query, **parameters):
+        #         with self._driver.session() as session:
+        #             result = session.run(query, **parameters)
+        #             return result.data()
+        #
+        # # 整合问题和查询结果
+        # def integrate_question_and_results(question, results):
+        #     integrated_prompt = f"问题：{question}\n"
+        #     integrated_prompt += "回答：\n"
+        #     i = 0
+        #     for record in results:
+        #         integrated_prompt += f"{record['e1.name']} - {record['r'][1]} - {record['e2.name']}\n"
+        #         i = i + 1
+        #         if i > 5:
+        #             integrated_prompt += "这些是部分结果\n"
+        #             break
+        #         # integrated_prompt += f"{record['e2.name']}\n"
+        #     return integrated_prompt
+        #
+        # # 实例化Neo4j连接对象
+        # neo4j_connector = Neo4jConnector()
+        #
+        # from jieba import analyse
+        #
+        # # 加载自定义词典
+        # jieba.load_userdict("/mnt/workspace/Langchain-Chatchat/webui_pages/custom_dict_simple.txt")
+        #
+        # # 使用 TF-IDF 提取关键词
+        # extracted_keywords = analyse.extract_tags(query, topK=5, withWeight=False, allowPOS=())
+        #
+        # print("提取的关键词：", extracted_keywords)
+        #
+        # if extracted_keywords != []:
+        #
+        #     # 构建查询语句
+        #     query_neo4j = """
+        #             MATCH (e1)-[r]->(e2)
+        #             WHERE e1.name CONTAINS $entity1 AND type(r) CONTAINS $entity2
+        #             RETURN e1.name,r,e2.name
+        #             """
+        #     # 构建查询语句
+        #     query_neo4j2 = """
+        #             MATCH (e1)-[r]->(e2)
+        #             WHERE e2.name CONTAINS $entity1 AND type(r) CONTAINS $entity2
+        #             RETURN e1.name,r,e2.name
+        #             """
+        #     prompt = ""
+        #     n = 0
+        #     flag = 1
+        #     for i in extracted_keywords:
+        #         for j in extracted_keywords:
+        #             if i == j:
+        #                 continue
+        #             # 执行查询
+        #             result = neo4j_connector.run_query(query_neo4j, entity1=i, entity2=j)
+        #             if result == []:
+        #                 continue
+        #             # 构造提示字符串
+        #             prompt += integrate_question_and_results(query, result)
+        #             n = n + 1
+        #             if n > 5:
+        #                 flag = 0
+        #                 break
+        #         if flag == 0:
+        #             break
+        #     n = 0
+        #     flag = 1
+        #     for i in extracted_keywords:
+        #         for j in extracted_keywords:
+        #             if i == j:
+        #                 continue
+        #             # 执行查询
+        #             result = neo4j_connector.run_query(query_neo4j2, entity1=i, entity2=j)
+        #             if result == []:
+        #                 continue
+        #             # 构造提示字符串
+        #             prompt += integrate_question_and_results(query, result)
+        #             n = n + 1
+        #             if n > 5:
+        #                 flag = 0
+        #                 break
+        #         if flag == 0:
+        #             break
+        #     # print(prompt)
+        #     if prompt != [] and prompt != "":
+        #         query = prompt
+        #     print(query)
+
         data = {
             "query": query,
             "conversation_id": conversation_id,

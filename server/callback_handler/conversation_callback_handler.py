@@ -19,13 +19,13 @@ class ConversationCallbackHandler(BaseCallbackHandler):
     def always_verbose(self) -> bool:
         """Whether to call verbose callbacks even if verbose is False."""
         return True
-
+    # LLM 开始生成结果时的回调
     def on_llm_start(
             self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
     ) -> None:
         # 如果想存更多信息，则prompts 也需要持久化
         pass
-
+    #处理 LLM 生成结果完成时的回调
     def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
         answer = response.generations[0][0].text
         update_message(self.message_id, answer)

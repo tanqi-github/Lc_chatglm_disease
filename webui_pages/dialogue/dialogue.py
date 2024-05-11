@@ -300,15 +300,327 @@ def dialogue_page(api: ApiRequest, is_lite: bool = False):
             history = get_messages_history(history_len)
             chat_box.user_say(prompt)
             if dialogue_mode == "LLM 对话":
-                chat_box.ai_say("正在思考...")
+                # chat_box.ai_say("正在思考...")
                 text = ""
                 message_id = ""
+
+                chat_box.ai_say("正在提取关键词:")
+                from neo4j import GraphDatabase
+                import torch
+                from transformers import AutoTokenizer, AutoModel
+                import jieba
+                import jieba.posseg as pseg
+                import jieba.analyse
+                # Neo4j连接配置
+                uri = "bolt://localhost:7687"
+                user = "neo4j"
+                password = "xueyan134679"
+
+                # Neo4j连接
+                class Neo4jConnector:
+                    def __init__(self):
+                        self._driver = GraphDatabase.driver(uri, auth=(user, password))
+
+                    def close(self):
+                        self._driver.close()
+
+                    def run_query(self, query, **parameters):
+                        with self._driver.session() as session:
+                            result = session.run(query, **parameters)
+                            return result.data()
+
+                # 打印结果
+                out_txt = []
+
+                # 整合问题和查询结果
+                def integrate_question_and_results(question, results):
+                    # integrated_prompt = f"关键词：{keywords}\n"
+                    # integrated_prompt += f"问题：{question}\n"
+                    # integrated_prompt = "回答：\n"
+                    integrated_prompt = ""
+                    i = 0
+                    for record in results:
+                        integrated_prompt += f"{record['e1.name']} - {record['r'][1]} - {record['e2.name']}\n"
+                        out_txt.append(f"{record['e1.name']} - {record['r'][1]} - {record['e2.name']}")
+                        i = i + 1
+                        if i > 5:
+                            # integrated_prompt+="这些是部分结果\n"
+                            break
+                        # integrated_prompt += f"{record['e2.name']}\n"
+                    return integrated_prompt
+
+                # 数据库
+                database_txt = []
+                disease_txt = []
+
+                # 整合问题和查询结果
+                def integrate_question_and_results_database(question, results):
+                    for record in results:
+                        database_txt.append(f"{record['e1.name']} - {record['r'][1]} - {record['e2.name']}")
+                        disease_txt.append(f"{record['e1.name']}")
+
+                # 实例化Neo4j连接对象
+                neo4j_connector = Neo4jConnector()
+
+                from jieba import analyse
+
+                # 加载自定义词典
+                # jieba.load_userdict("/mnt/workspace/Langchain-Chatchat/webui_pages/custom_dict_simple.txt")
+                jieba.load_userdict("/mnt/workspace/Langchain-Chatchat/Chinese-Word2vec-Medicine/med_word.txt")
+
+                # 使用 TF-IDF 提取关键词
+                extracted_keywords = analyse.extract_tags(prompt, topK=5, withWeight=False, allowPOS=())
+
+                print("提取的关键词：", extracted_keywords)
+
+                if extracted_keywords == []:
+                    chat_box.ai_say("暂无关键词")
+                else:
+                    chat_box.ai_say(f"{extracted_keywords}")
+                chat_box.ai_say("正在从neo4j知识图谱数据库中查询相关结果:\n")
+
+                import jieba
+                # 判断一个句子是否是问句的函数
+                def is_question(sentence):
+                    # 分词
+                    words = jieba.lcut(sentence)
+                    # 疑问词列表，你可以根据实际情况扩展
+                    question_words = ['谁', '什么', '哪里', '为什么', '怎么', '怎样', '多少', '几时', '如何', '是不是', '是否', '能否']
+                    # 检查句子中是否包含疑问词
+                    for word in words:
+                        if word in question_words:
+                            return True
+                    # 如果句子中没有疑问词，则判断为非问句
+                    return False
+
+                add_keywords = []
+                array = []
+
+                if is_question(prompt):
+                    print("这是一个问句。")
+                    if extracted_keywords != []:
+
+                        # 构建查询语句
+                        query_neo4j = """
+                                        MATCH (e1)-[r]->(e2)
+                                        WHERE e1.name CONTAINS $entity1 AND type(r) CONTAINS $entity2
+                                        RETURN e1.name,r,e2.name
+                                        """
+                        # 构建查询语句
+                        query_neo4j2 = """
+                                        MATCH (e1)-[r]->(e2)
+                                        WHERE e2.name CONTAINS $entity1 AND type(r) CONTAINS $entity2
+                                        RETURN e1.name,r,e2.name
+                                        """
+                        # prompt模板
+                        prompt_txt = ""
+                        # n=0
+                        flag = 1
+                        for i in extracted_keywords:
+                            for j in extracted_keywords:
+                                if i == j:
+                                    continue
+                                # 执行查询
+                                result = neo4j_connector.run_query(query_neo4j, entity1=i, entity2=j)
+                                if result == []:
+                                    continue
+                                # 构造提示字符串
+                                prompt_txt += integrate_question_and_results(prompt, result)
+                                integrate_question_and_results_database(prompt, result)
+                                # n=n+1
+                                # if n>5:
+                                #     flag=0
+                                #     break
+                            # if flag==0:
+                            #     break
+                        # n=0
+                        flag = 1
+                        # question_header=f"关键词：{extracted_keywords}\n"
+                        question_header = f"问题：{prompt}\n"
+                        question_header += "回答：\n"
+                        for i in extracted_keywords:
+                            for j in extracted_keywords:
+                                if i == j:
+                                    continue
+                                # 执行查询
+                                result = neo4j_connector.run_query(query_neo4j2, entity1=i, entity2=j)
+                                if result == []:
+                                    continue
+                                # 构造提示字符串
+                                prompt_txt += integrate_question_and_results(prompt, result)
+                                integrate_question_and_results_database(prompt, result)
+                                # n=n+1
+                                # if n>5:
+                                #     flag=0
+                                #     break
+                            # if flag==0:
+                            #     break
+                        # print(prompt)
+                        if prompt_txt != [] and prompt_txt != "":
+                            prompt = question_header + prompt_txt + "这些是部分结果\n"
+                        # print(prompt)
+                else:
+                    print("这不是一个问句。")
+                    if history != []:
+                        qquery = history[0]['content']
+                        array_string = history[2]['content']
+                        # 使用 eval() 函数将字符串转换为数组
+                        array = eval(array_string)
+                        print(array)
+
+                        import re
+                        add_keywords = []
+                        is_no = []
+                        for i in range(0, len(history)):
+                            i = i + 1
+                            if i % 7 == 0:
+                                # 定义包含字符串
+                                text = history[i - 1]['content']
+                                # 使用正则表达式获取指定文字中间的内容
+                                pattern = r"您是否还有(.*?)的症状？"
+                                result = re.search(pattern, text)
+                                # 打印匹配到的内容
+                                if result:
+                                    content = result.group(1)
+                                    if i < len(history):
+                                        a = history[i]['content']
+                                        if "没有" in a:
+                                            is_no.append("没有")
+                                        else:
+                                            is_no.append("有")
+                                    add_keywords.append(content)
+                                    # print(content)
+                                else:
+                                    print("未找到匹配的内容")
+                            else:
+                                continue
+                        print(add_keywords)
+
+                    if "没有" in extracted_keywords:
+                        # 构建查询语句
+                        query_neo4j = """
+                                        MATCH (e1)-[r]->(e2)
+                                        WHERE e1.name CONTAINS $entity1 AND type(r) CONTAINS $entity2"""
+                        j = 0
+                        for i in add_keywords:
+                            if j < len(is_no):
+                                if is_no[j] == "没有":
+                                    query_neo4j += " AND NOT e2.name CONTAINS " + '"' + i + '"'
+                                elif is_no[j] == "有":
+                                    query_neo4j += " AND e2.name CONTAINS " + '"' + i + '"'
+                            else:
+                                query_neo4j += " AND NOT e2.name CONTAINS " + '"' + i + '"'
+                            j = j + 1
+                        query_neo4j += """
+                                        RETURN e1.name,r,e2.name
+                                        """
+                        # 构建查询语句
+                        query_neo4j2 = """
+                                        MATCH (e1)-[r]->(e2)
+                                        WHERE e2.name CONTAINS $entity1 AND type(r) CONTAINS $entity2"""
+                        j = 0
+                        for i in add_keywords:
+                            if j < len(is_no):
+                                if is_no[j] == "没有":
+                                    query_neo4j2 += " AND NOT e2.name CONTAINS " + '"' + i + '"'
+                                elif is_no[j] == "有":
+                                    query_neo4j2 += " AND e2.name CONTAINS " + '"' + i + '"'
+                            else:
+                                query_neo4j2 += " AND NOT e2.name CONTAINS " + '"' + i + '"'
+                            j = j + 1
+                        query_neo4j2 += """
+                                        RETURN e1.name,r,e2.name
+                                        """
+                    else:
+                        # 构建查询语句
+                        query_neo4j = """
+                                        MATCH (e1)-[r]->(e2)
+                                        WHERE e1.name CONTAINS $entity1 AND type(r) CONTAINS $entity2"""
+                        j = 0
+                        for i in add_keywords:
+                            if j < len(is_no):
+                                if is_no[j] == "没有":
+                                    query_neo4j += " AND NOT e2.name CONTAINS " + '"' + i + '"'
+                                elif is_no[j] == "有":
+                                    query_neo4j += " AND e2.name CONTAINS " + '"' + i + '"'
+                            else:
+                                query_neo4j += " AND e2.name CONTAINS " + '"' + i + '"'
+                            j = j + 1
+                        query_neo4j += """
+                                        RETURN e1.name,r,e2.name
+                                        """
+                        # 构建查询语句
+                        query_neo4j2 = """
+                                        MATCH (e1)-[r]->(e2)
+                                        WHERE e2.name CONTAINS $entity1 AND type(r) CONTAINS $entity2"""
+                        j = 0
+                        for i in add_keywords:
+                            if j < len(is_no):
+                                if is_no[j] == "没有":
+                                    query_neo4j2 += " AND NOT e2.name CONTAINS " + '"' + i + '"'
+                                elif is_no[j] == "有":
+                                    query_neo4j2 += " AND e2.name CONTAINS " + '"' + i + '"'
+                            else:
+                                query_neo4j2 += " AND e2.name CONTAINS " + '"' + i + '"'
+                            j = j + 1
+                        query_neo4j2 += """
+                                        RETURN e1.name,r,e2.name
+                                        """
+                    print(query_neo4j)
+                    print(query_neo4j2)
+                    # prompt模板
+                    prompt_txt = ""
+                    flag = 1
+                    for i in array:
+                        for j in array:
+                            if i == j:
+                                continue
+                            # 执行查询
+                            result = neo4j_connector.run_query(query_neo4j, entity1=i, entity2=j)
+                            if result == []:
+                                continue
+                            # 构造提示字符串
+                            prompt_txt += integrate_question_and_results(prompt, result)
+                            integrate_question_and_results_database(prompt, result)
+                    flag = 1
+                    question_header = f"问题：{qquery}\n"
+                    question_header += "回答：\n"
+                    for i in array:
+                        for j in array:
+                            if i == j:
+                                continue
+                            # 执行查询
+                            result = neo4j_connector.run_query(query_neo4j2, entity1=i, entity2=j)
+                            if result == []:
+                                continue
+                            # 构造提示字符串
+                            prompt_txt += integrate_question_and_results(prompt, result)
+                            integrate_question_and_results_database(prompt, result)
+                    if prompt_txt != [] and prompt_txt != "":
+                        prompt = question_header + prompt_txt + "这些是部分结果\n"
+                    # print(prompt)
+                if out_txt == []:
+                    chat_box.ai_say("数据库暂无结果")
+                else:
+                    chat_box.ai_say(out_txt)
+                chat_box.ai_say("正在思考...")
+
+                qu_history = []
+                if len(history) >= 2:
+                    for i in range(0, len(history)):
+                        if i == 0 or i == len(history) - 2:
+                            qu_history.append(history[i])
+                else:
+                    qu_history = history
+                print(qu_history)
+
                 r = api.chat_chat(prompt,
                                   history=history,
                                   conversation_id=conversation_id,
                                   model=llm_model,
                                   prompt_name=prompt_template_name,
                                   temperature=temperature)
+
                 for t in r:
                     if error_msg := check_error_msg(t):  # check whether error occured
                         st.error(error_msg)
@@ -325,6 +637,72 @@ def dialogue_page(api: ApiRequest, is_lite: bool = False):
                                        key=message_id,
                                        on_submit=on_feedback,
                                        kwargs={"message_id": message_id, "history_index": len(chat_box.history) - 1})
+                print(len(database_txt))
+                if (len(database_txt) > 1):
+                    # jieba.load_userdict("/mnt/workspace/Langchain-Chatchat/Chinese-Word2vec-Medicine/med_word.txt")
+                    # 使用 TF-IDF 提取关键词
+                    strr = database_txt[0]
+                    strr = strr.split("-", 3)
+                    strr = strr[2]
+                    database_keywords = analyse.extract_tags(strr, topK=10, withWeight=False, allowPOS=())
+                    print(database_keywords)
+                    a = ""
+                    for i in database_keywords:
+                        if i in extracted_keywords:
+                            continue
+                        elif i in add_keywords:
+                            continue
+                        elif i in array:
+                            continue
+                        else:
+                            a = i
+                            break
+                    reverse_question = "您是否还有" + a + "的症状？"
+                    chat_box.ai_say(reverse_question)
+                elif (len(database_txt) == 1):
+                    strr = disease_txt[0]
+
+                    chat_box.ai_say("正在查找数据库中与此疾病相关的全部信息")
+                    data = []
+                    # 构建查询语句
+                    query_neo4j = """
+                                    MATCH (e1)-[r]->(e2)
+                                    WHERE e1.name=$entity1
+                                    RETURN e1.name,r,e2.name
+                                    """
+                    # prompt模板
+                    prompt_txt = "有关于疾病" + strr + ",以下是相关的所有信息,可能会对你有用"
+                    if strr == "少精症":
+                        print('y')
+                    result = neo4j_connector.run_query(query_neo4j, entity1=strr)
+                    for record in result:
+                        prompt_txt += f"{record['e1.name']} - {record['r'][1]} - {record['e2.name']}\n"
+                        data.append(f"{record['e1.name']} - {record['r'][1]} - {record['e2.name']}")
+                    chat_box.ai_say(data)
+                    r = api.chat_chat(prompt_txt,
+                                      # history=history,
+                                      conversation_id=conversation_id,
+                                      model=llm_model,
+                                      prompt_name=prompt_template_name,
+                                      temperature=temperature)
+                    for t in r:
+                        if error_msg := check_error_msg(t):  # check whether error occured
+                            st.error(error_msg)
+                            break
+                        text += t.get("text", "")
+                        chat_box.update_msg(text)
+                        message_id = t.get("message_id", "")
+
+                    metadata = {
+                        "message_id": message_id,
+                    }
+
+                    chat_box.update_msg(text, streaming=False, metadata=metadata)  # 更新最终的字符串，去除光标
+                    chat_box.show_feedback(**feedback_kwargs,
+                                           key=message_id,
+                                           on_submit=on_feedback,
+                                           kwargs={"message_id": message_id,
+                                                   "history_index": len(chat_box.history) - 1})
 
             elif dialogue_mode == "自定义Agent问答":
                 if not any(agent in llm_model for agent in SUPPORT_AGENT_MODEL):

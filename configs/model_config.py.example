@@ -206,7 +206,7 @@ MODEL_PATH = {
         "BlueLM-7B-Chat": "vivo-ai/BlueLM-7B-Chat",
         "BlueLM-7B-Chat-32k": "vivo-ai/BlueLM-7B-Chat-32k",
 
-        "Yi-34B-Chat": "https://huggingface.co/01-ai/Yi-34B-Chat",
+        "Yi-34B-Chat": "https://hf-mirror.com/01-ai/Yi-34B-Chat",
 
         "agentlm-7b": "THUDM/agentlm-7b",
         "agentlm-13b": "THUDM/agentlm-13b",

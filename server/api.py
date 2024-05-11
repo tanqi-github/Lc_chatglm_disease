@@ -26,20 +26,22 @@ from typing import List, Literal
 
 nltk.data.path = [NLTK_DATA_PATH] + nltk.data.path
 
-
+#这段代码定义了一个名为document的异步函数，它返回一个RedirectResponse对象，将请求重定向到"/docs" URL
 async def document():
     return RedirectResponse(url="/docs")
 
-
+#这个create_app函数创建了一个 FastAPI 应用实例，设置了标题为"Langchain-Chatchat API Server"，版本由变量VERSION指定
 def create_app(run_mode: str = None):
     app = FastAPI(
         title="Langchain-Chatchat API Server",
         version=VERSION
     )
+    #这一行调用了一个名为MakeFastAPIOffline的函数，并将应用实例 app 作为参数传递。这个函数可能配置了 FastAPI 应用以使其能够离线工作，但没有看到 MakeFastAPIOffline 的实现，所以很难确定
     MakeFastAPIOffline(app)
     # Add CORS middleware to allow all origins
     # 在config.py中设置OPEN_DOMAIN=True，允许跨域
     # set OPEN_DOMAIN=True in config.py to allow cross-domain
+    #这里检查了一个名为 OPEN_CROSS_DOMAIN 的变量是否为真。如果是，就向 FastAPI 应用添加了 CORS（跨源资源共享）中间件，以允许来自任何源的请求。这对于启用跨域请求很有用
     if OPEN_CROSS_DOMAIN:
         app.add_middleware(
             CORSMiddleware,
@@ -48,6 +50,7 @@ def create_app(run_mode: str = None):
             allow_methods=["*"],
             allow_headers=["*"],
         )
+    #这一行调用了一个名为 mount_app_routes 的函数，来挂载应用路由，传递了 FastAPI 应用实例和一个可选的 run_mode 参数。然后，它返回配置好的 FastAPI 应用
     mount_app_routes(app, run_mode=run_mode)
     return app
 

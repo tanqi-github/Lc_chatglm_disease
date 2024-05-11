@@ -117,16 +117,16 @@ $ pip install -r requirements_webui.txt
 如需在本地或离线环境下运行本项目，需要首先将项目所需的模型下载至本地，通常开源 LLM 与 Embedding
 模型可以从 [HuggingFace](https://huggingface.co/models) 下载。
 
-以本项目中默认使用的 LLM 模型 [THUDM/ChatGLM3-6B](https://huggingface.co/THUDM/chatglm3-6b) 与 Embedding
-模型 [BAAI/bge-large-zh](https://huggingface.co/BAAI/bge-large-zh) 为例：
+以本项目中默认使用的 LLM 模型 [chatglm3-6b](https://huggingface.co/chatglm3-6b) 与 Embedding
+模型 [bge-large-zh](https://huggingface.co/bge-large-zh) 为例：
 
 下载模型需要先[安装 Git LFS](https://docs.github.com/zh/repositories/working-with-files/managing-large-files/installing-git-large-file-storage)
 ，然后运行
 
 ```Shell
 $ git lfs install
-$ git clone https://huggingface.co/THUDM/chatglm3-6b
-$ git clone https://huggingface.co/BAAI/bge-large-zh
+$ git clone https://huggingface.co/chatglm3-6b
+$ git clone https://huggingface.co/bge-large-zh
 ```
 
 ### 3. 初始化知识库和配置文件

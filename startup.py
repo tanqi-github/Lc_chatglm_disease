@@ -8,15 +8,18 @@ from datetime import datetime
 from pprint import pprint
 from langchain_core._api import deprecated
 
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+#这部分代码尝试导入 numexpr 库，然后获取系统的 CPU 核心数量，并将其设置为 NUMEXPR_MAX_THREADS 环境变量的值，以供后续使用。如果导入或设置失败，则忽略错误
 try:
     import numexpr
 
     n_cores = numexpr.utils.detect_number_of_cores()
-    os.environ["NUMEXPR_MAX_THREADS"] = str(n_cores)
+    os.environ["NUMEXPR_MAX_THREADS"] = str(n_cores)#CPU数量
 except:
     pass
-
+#这一行将父目录添加到系统路径中，以便 Python 可以找到父目录中的模块。
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+#从一个模块中导入了一些变量和配置项
 from configs import (
     LOG_PATH,
     log_verbose,
@@ -31,38 +34,49 @@ from configs import (
     WEBUI_SERVER,
     HTTPX_DEFAULT_TIMEOUT,
 )
+#从另一个模块中导入了一些实用函数和 FastAPI 相关的内容
 from server.utils import (fschat_controller_address, fschat_model_worker_address,
                           fschat_openai_api_address, get_httpx_client, get_model_worker_config,
                           MakeFastAPIOffline, FastAPI, llm_device, embedding_device)
+#导入了一个函数 create_tables，可能是用来在知识库中创建表的
 from server.knowledge_base.migrate import create_tables
+#导入了 Python 内置的命令行参数解析模块 argparse
 import argparse
 from typing import List, Dict
 from configs import VERSION
 
-
+#创建一个控制器应用
+#这一行使用 @deprecated 装饰器标记了下面定义的函数，表示该函数已被弃用。装饰器接受了一些参数，包括 since 表示从哪个版本开始弃用、message 表示弃用的消息、removal 表示将在哪个版本移除
 @deprecated(
     since="0.3.0",
     message="模型启动功能将于 Langchain-Chatchat 0.3.x重写,支持更多模式和加速启动，0.2.x中相关功能将废弃",
     removal="0.3.0")
+#这是函数的定义，它接受两个参数 dispatch_method 和 log_level，并返回一个 FastAPI 对象
 def create_controller_app(
         dispatch_method: str,
         log_level: str = "INFO",
 ) -> FastAPI:
+    #这里导入了 fastchat.constants 模块，并将其中的 LOGDIR 设置为全局变量 LOG_PATH
     import fastchat.constants
     fastchat.constants.LOGDIR = LOG_PATH
+    #这里从 fastchat.serve.controller 模块中导入了 app、Controller 和 logger，并将 logger 的日志级别设置为传入的 log_level
     from fastchat.serve.controller import app, Controller, logger
     logger.setLevel(log_level)
 
+    #创建了一个 Controller 实例，并将其赋值给 fastchat.serve.controller 模块中的 controller 变量
     controller = Controller(dispatch_method)
     sys.modules["fastchat.serve.controller"].controller = controller
 
+    #调用了 MakeFastAPIOffline 函数，这个函数的具体功能在代码中并没有给出，但根据命名来看，可能是用于设置 FastAPI 应用离线的一些操作
     MakeFastAPIOffline(app)
     app.title = "FastChat Controller"
     app._controller = controller
+    #这个对象应该是一个 FastAPI 应用对象，可以被用于启动服务器
     return app
 
-
+#这是一个函数定义，用于创建模型工作应用程序。它接受一个可选的日志级别参数 log_level 和任意数量的关键字参数 kwargs，并返回一个 FastAPI 实例
 def create_model_worker_app(log_level: str = "INFO", **kwargs) -> FastAPI:
+    #提供了 kwargs 参数可能包含的字段及其用途的说明
     """
     kwargs包含的字段如下：
     host:
@@ -81,18 +95,22 @@ def create_model_worker_app(log_level: str = "INFO", **kwargs) -> FastAPI:
         model_path: `model_name_or_path`,huggingface的repo-id或本地路径
         device:`LLM_DEVICE`
     """
+    #导入 fastchat.constants 模块，并将其 LOGDIR 属性设置为全局变量 LOG_PATH
     import fastchat.constants
     fastchat.constants.LOGDIR = LOG_PATH
+    #导入了 argparse 模块，并创建了一个命令行解析器 parser，然后通过 parse_args([]) 解析空列表，获取一个空的 args 对象
     import argparse
 
     parser = argparse.ArgumentParser()
     args = parser.parse_args([])
-
+    #遍历关键字参数 kwargs，将其键值对分别设置为 args 对象的属性和对应值
     for k, v in kwargs.items():
         setattr(args, k, v)
+    #如果关键字参数中存在 langchain_model，则从 fastchat.serve.base_model_worker 模块中导入 app，并将 worker 设置为空字符串
     if worker_class := kwargs.get("langchain_model"):  # Langchian支持的模型不用做操作
         from fastchat.serve.base_model_worker import app
         worker = ""
+    #如果关键字参数中存在 worker_class，则从 fastchat.serve.base_model_worker 模块中导入 app，并根据参数创建一个 worker 实例，然后设置模块中的日志级别为传入的 log_level
     # 在线模型API
     elif worker_class := kwargs.get("worker_class"):
         from fastchat.serve.base_model_worker import app
@@ -102,6 +120,7 @@ def create_model_worker_app(log_level: str = "INFO", **kwargs) -> FastAPI:
                               worker_addr=args.worker_address)
         # sys.modules["fastchat.serve.base_model_worker"].worker = worker
         sys.modules["fastchat.serve.base_model_worker"].logger.setLevel(log_level)
+    #如果以上两个条件都不满足，进入 else 分支。根据关键字参数中的模型名称和其他条件，可能会导入不同的模块，并创建相应的模型工作者实例
     # 本地模型
     else:
         from configs.model_config import VLLM_MODEL_DICT
@@ -177,7 +196,7 @@ def create_model_worker_app(log_level: str = "INFO", **kwargs) -> FastAPI:
             args.max_gpu_memory = "22GiB"
             args.num_gpus = 1  # model worker的切分是model并行，这里填写显卡的数量
 
-            args.load_8bit = False
+            args.load_8bit = True
             args.cpu_offloading = None
             args.gptq_ckpt = None
             args.gptq_wbits = 16
@@ -239,11 +258,12 @@ def create_model_worker_app(log_level: str = "INFO", **kwargs) -> FastAPI:
             sys.modules["fastchat.serve.model_worker"].logger.setLevel(log_level)
 
     MakeFastAPIOffline(app)
+    #设置 FastAPI 应用的标题，并将创建的 worker 实例赋值给应用的 _worker 属性，最后返回应用实例
     app.title = f"FastChat LLM Server ({args.model_names[0]})"
     app._worker = worker
     return app
 
-
+#创建一个 OpenAI API 的 FastAPI 应用
 def create_openai_api_app(
         controller_address: str,
         api_keys: List = [],
@@ -251,11 +271,12 @@ def create_openai_api_app(
 ) -> FastAPI:
     import fastchat.constants
     fastchat.constants.LOGDIR = LOG_PATH
+    #导入所需的模块和函数。其中，app 是 FastAPI 应用实例，CORSMiddleware 是 FastAPI 的中间件，app_settings 是 FastAPI 应用的设置，build_logger 是用于构建日志记录器的函数
     from fastchat.serve.openai_api_server import app, CORSMiddleware, app_settings
     from fastchat.utils import build_logger
     logger = build_logger("openai_api", "openai_api.log")
     logger.setLevel(log_level)
-
+    #向 FastAPI 应用添加 CORS 中间件，允许跨域请求
     app.add_middleware(
         CORSMiddleware,
         allow_credentials=True,
@@ -263,8 +284,9 @@ def create_openai_api_app(
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
+    #将刚刚创建的日志记录器赋值给 fastchat.serve.openai_api_server 模块中的 logger 属性
     sys.modules["fastchat.serve.openai_api_server"].logger = logger
+    #设置 FastAPI 应用的控制器地址和 API 密钥
     app_settings.controller_address = controller_address
     app_settings.api_keys = api_keys
 
@@ -272,10 +294,11 @@ def create_openai_api_app(
     app.title = "FastChat OpeanAI API Server"
     return app
 
-
+#在 FastAPI 应用启动时触发一个事件
 def _set_app_event(app: FastAPI, started_event: mp.Event = None):
     @app.on_event("startup")
     async def on_startup():
+        #如果传入的 started_event 不为 None，则调用其 set() 方法，将事件设置为已触发状态，表示应用已启动
         if started_event is not None:
             started_event.set()
 
