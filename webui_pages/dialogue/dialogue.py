@@ -657,6 +657,25 @@ def dialogue_page(api: ApiRequest, is_lite: bool = False):
                         else:
                             a = i
                             break
+                    if a=="":
+                        for i in range(1,len(database_txt)):
+                            strr=database_txt[i]
+                            strr=strr.split("-",3)
+                            strr=strr[2]
+                            database_keywords = analyse.extract_tags(strr, topK=10, withWeight=False, allowPOS=())
+                            print(database_keywords)
+                            for i in database_keywords:
+                                if i in extracted_keywords:
+                                    continue
+                                elif i in add_keywords:
+                                    continue
+                                elif i in array:
+                                    continue
+                                else:
+                                    a=i
+                                    break
+                            if a!="":
+                                break
                     reverse_question = "您是否还有" + a + "的症状？"
                     chat_box.ai_say(reverse_question)
                 elif (len(database_txt) == 1):
