@@ -40,3 +40,16 @@ watchdog~=3.0.0
 # beautifulsoup4~=4.12.2
 # pysrt~=1.1.2
 
+websockets==12.0
+cachetools
+strsimpy==0.2.1
+markdownify==0.11.6
+sentence_transformers==2.2.2
+streamlit==1.30.0
+streamlit-option-menu==0.3.12
+streamlit-antd-components==0.3.1
+streamlit-chatbox==1.1.11
+streamlit-modal==0.1.0
+streamlit-aggrid==0.3.4.post3
+jieba
+neo4j
