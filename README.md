@@ -3,7 +3,9 @@
 ### 1. 环境配置
 
 安装全部依赖
-$ pip install -r requirements_lite.txt  
+```shell
+$ pip install -r requirements_lite.txt
+```
 
 创建名为pwd.py的文件，将其置于python环境的lib文件夹中。
 
