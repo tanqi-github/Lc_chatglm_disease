@@ -314,7 +314,7 @@ def dialogue_page(api: ApiRequest, is_lite: bool = False):
                 # Neo4j连接配置
                 uri = "bolt://localhost:7687"
                 user = "neo4j"
-                password = "xueyan134679"
+                password = "password"
 
                 # Neo4j连接
                 class Neo4jConnector:
@@ -365,8 +365,8 @@ def dialogue_page(api: ApiRequest, is_lite: bool = False):
                 from jieba import analyse
 
                 # 加载自定义词典
-                # jieba.load_userdict("/mnt/workspace/Langchain-Chatchat/webui_pages/custom_dict_simple.txt")
-                jieba.load_userdict("/mnt/workspace/Langchain-Chatchat/Chinese-Word2vec-Medicine/med_word.txt")
+                # jieba.load_userdict("webui_pages/custom_dict_simple.txt")
+                jieba.load_userdict("Chinese-Word2vec-Medicine/med_word.txt")
 
                 # 使用 TF-IDF 提取关键词
                 extracted_keywords = analyse.extract_tags(prompt, topK=5, withWeight=False, allowPOS=())
