@@ -641,41 +641,28 @@ def dialogue_page(api: ApiRequest, is_lite: bool = False):
                 if (len(database_txt) > 1):
                     # jieba.load_userdict("/mnt/workspace/Langchain-Chatchat/Chinese-Word2vec-Medicine/med_word.txt")
                     # 使用 TF-IDF 提取关键词
-                    strr = database_txt[0]
-                    strr = strr.split("-", 3)
-                    strr = strr[2]
-                    database_keywords = analyse.extract_tags(strr, topK=10, withWeight=False, allowPOS=())
-                    print(database_keywords)
-                    a = ""
-                    for i in database_keywords:
-                        if i in extracted_keywords:
-                            continue
-                        elif i in add_keywords:
-                            continue
-                        elif i in array:
-                            continue
-                        else:
-                            a = i
-                            break
-                    if a=="":
-                        for i in range(1,len(database_txt)):
-                            strr=database_txt[i]
-                            strr=strr.split("-",3)
-                            strr=strr[2]
-                            database_keywords = analyse.extract_tags(strr, topK=10, withWeight=False, allowPOS=())
-                            print(database_keywords)
-                            for i in database_keywords:
-                                if i in extracted_keywords:
-                                    continue
-                                elif i in add_keywords:
-                                    continue
-                                elif i in array:
-                                    continue
-                                else:
-                                    a=i
-                                    break
-                            if a!="":
-                                break
+                    from collections import Counter
+                    for i in range(0, len(database_txt)):
+                        strr = database_txt[i]
+                        strr = strr.split("-", 3)
+                        strr = strr[2]
+                        database_keywords = analyse.extract_tags(strr, topK=10, withWeight=False, allowPOS=('a', 'ad', 'ag', 'al', 'an', 'b', 'd', 'dg', 'f', 'i', 'l', 'nr', 'ns', 'nt', 'nz', 'vg', 'vd', 'vn', 'vq', 'vi', 'v', 'z'))
+                        print(database_keywords)
+                        word_count=Counter()
+                        word=[]
+                        for i in database_keywords:
+                            if i in extracted_keywords:
+                                continue
+                            elif i in add_keywords:
+                                continue
+                            elif i in array:
+                                continue
+                            else:
+                                word.append(i)
+                        word_count.update(word)
+                    a,num=word_count.most_common(1)[0]
+                    print(a)
+                    print(num)
                     reverse_question = "您是否还有" + a + "的症状？"
                     chat_box.ai_say(reverse_question)
                 elif (len(database_txt) == 1):
